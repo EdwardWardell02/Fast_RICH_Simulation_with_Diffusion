@@ -1,0 +1,42 @@
+simulator:
+  image_size: 32
+  refractive_index: 1.0005 # Silicate Areogel
+  radiator_length: 1.0 #2 # 0.05 # 5cm
+  single_photon_resolution: 1.0 # 0.5 # 1.0 # 1mrad
+  detection_efficiency: 0.2 # 20%
+  momentum_range: [0, 100.0] # GeV/c
+  pixel_pitch: 0.0025 #0.0005 #0.005 #5mm
+  detector_distance: 1 #Distance from radiator to detector in meters
+# Dataset Parameters
+dataset:
+  num_samples: 200000
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  data_save_path: "data/processed/RICH_dataset.npz"
+
+# Diffusion Model Parameters
+diffusion:
+  timesteps: 1000
+  beta_schedule: "linear" # Options: linear, cosine
+  beta_start : 0.0001
+  beta_end : 0.02
+
+# U-Net model Parameters
+model:
+  dim: 64
+  dim_mults: [1, 2, 4, 8]
+  channels: 1 # Grayscale images
+  condition_dim: 4 #[One hot type (3) + momentum (1)]
+
+# Training Parameters
+training:
+  batch_size: 128
+  learning_rate: 1e-4
+  num_epochs: 100
+  checkpoint_dir: "models/checkpoints/"
+
+# Paths
+paths:
+  log_dir: "logs/"
+  final_model_save_path: "models/best_model.pth"
