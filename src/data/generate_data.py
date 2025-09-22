@@ -66,16 +66,17 @@ def generate_dataset(config, output_path, num_samples_per_type=10000):
             num_samples_per_type, 
             particle_type=particle_type
         )
-        
-        # Store data
-        all_images.extend(data['images'])
-        all_types.extend(data['types'])
-        all_momenta.extend(data['momenta'])
-        all_photon_hits.extend(data['photon_hits'])
-        
-        # Create one-hot encoded types
-        one_hot_types = [_one_hot_encode_particle_type(t) for t in data['types']]
-        all_one_hot_types.extend(one_hot_types)
+        for i in range(len(data['types'])):
+            if data['photon_hits'][i] > 0:
+                # Store data
+                all_images.append(data['images'][i])
+                all_types.append(data['types'][i])
+                all_momenta.append(data['momenta'][i])
+                all_photon_hits.append(data['photon_hits'][i])
+                
+                # Create one-hot encoded type
+                one_hot_type = _one_hot_encode_particle_type(data['types'][i])
+                all_one_hot_types.append(one_hot_type)
     
     # Convert to numpy arrays
     all_images = np.array(all_images)
