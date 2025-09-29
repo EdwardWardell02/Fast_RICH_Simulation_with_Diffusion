@@ -35,7 +35,7 @@ def _one_hot_encode_particle_type(particle_type):
         
     return encoding
 
-def generate_dataset(config, output_path, num_samples_per_type=10000):
+def generate_dataset(config, output_path, num_samples_per_type=10000, particle_types=None):
     """
     Generate a dataset of RICH detector events.
     
@@ -48,8 +48,10 @@ def generate_dataset(config, output_path, num_samples_per_type=10000):
     simulator = RICHSimulator(config)
     
     # Particle types to generate
-    particle_types = ['pi', 'K', 'electron', 'muon', 'proton']
-    
+    if particle_types == None:
+        particle_types = ['pi', 'K', 'electron', 'muon', 'proton']
+    else:
+        particle_types = particle_types
     # Lists to store data
     all_images = []
     all_types = []
@@ -58,13 +60,11 @@ def generate_dataset(config, output_path, num_samples_per_type=10000):
     all_one_hot_types = []
     
     # Generate events for each particle type
-    for particle_type in particle_types:
-        print(f"Generating {num_samples_per_type} events for {particle_type}")
-        
-        # Generate events
+    if particle_types is not None:
+        print(f"Generating {num_samples_per_type} events for {particle_types}")
         data = simulator.generate_events(
             num_samples_per_type, 
-            particle_type=particle_type
+            particle_type=particle_types
         )
         for i in range(len(data['types'])):
             if data['photon_hits'][i] > 0:
@@ -77,6 +77,26 @@ def generate_dataset(config, output_path, num_samples_per_type=10000):
                 # Create one-hot encoded type
                 one_hot_type = _one_hot_encode_particle_type(data['types'][i])
                 all_one_hot_types.append(one_hot_type)
+    else:           
+        for particle_type in particle_types:
+            print(f"Generating {num_samples_per_type} events for {particle_type}")
+            
+            # Generate events
+            data = simulator.generate_events(
+                num_samples_per_type, 
+                particle_type=particle_type
+            )
+            for i in range(len(data['types'])):
+                if data['photon_hits'][i] > 0:
+                    # Store data
+                    all_images.append(data['images'][i])
+                    all_types.append(data['types'][i])
+                    all_momenta.append(data['momenta'][i])
+                    all_photon_hits.append(data['photon_hits'][i])
+                    
+                    # Create one-hot encoded type
+                    one_hot_type = _one_hot_encode_particle_type(data['types'][i])
+                    all_one_hot_types.append(one_hot_type)
     
     # Convert to numpy arrays
     all_images = np.array(all_images)
@@ -116,3 +136,47 @@ def generate_dataset(config, output_path, num_samples_per_type=10000):
     print(f"Dataset generated with {len(all_images)} events")
     print(f"Images saved to: {output_path / 'rich_images.npz'}")
     print(f"Metadata saved to: {output_path / 'rich_metadata.csv'}")
+
+from tqdm import tqdm
+def generate_combined_events_dataset(config, output_path, number_of_images=1000, num_samples_per_image=10000):
+    """
+    Generate a dataset of RICH detector combined images.
+    
+    Each output image is formed by combining many events.
+    """
+    simulator = RICHSimulator(config)
+
+    all_images = []
+    all_photon_hits = []
+
+    for i in tqdm(range(number_of_images)):
+        data = simulator.generate_events(
+            num_samples_per_image,
+            momentum_distribution='uniform'
+        )
+
+        # Sum over all generated events to form one combined image
+        combined_image = np.sum(data['images'], axis=0)
+
+        # Store
+        all_images.append(combined_image)
+        all_photon_hits.append(np.sum(data['photon_hits']))
+
+    # Convert to arrays
+    all_images = np.array(all_images)
+    all_photon_hits = np.array(all_photon_hits)
+
+    # Save results
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    np.savez_compressed(
+        output_path / 'rich_images_combined_events.npz',
+        images=all_images,
+        photon_hits=all_photon_hits
+    )
+
+    with open(output_path / 'generation_config.yaml', 'w') as f:
+        yaml.dump(config, f)
+
+    print(f"Dataset generated with {len(all_images)} combined images")
+    print(f"Images saved to: {output_path / 'rich_images_combined_events.npz'}")
