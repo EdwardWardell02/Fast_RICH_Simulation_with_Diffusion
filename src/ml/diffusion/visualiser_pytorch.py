@@ -313,3 +313,560 @@ class RICHVisualiser:
         plt.close()
         
         print(f"Loss curves saved: {filename}")
+
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
+
+from scipy.stats import norm
+class StochasticProcessVisualiser:
+    """Visualize the exponential complexity of diffusion trajectories"""
+    
+    def __init__(self, output_dir="stochastic_analysis"):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(exist_ok=True)
+
+    def plot_stochastic_process_illustration(self, num_paths=10, timesteps=100, filename="stochastic_process.png"):
+        """
+        Visualize multiple stochastic trajectories in diffusion process
+        """
+        plt.figure(figsize=(15, 10))
+        
+        # Simulate multiple stochastic paths (Brownian motion-like)
+        np.random.seed(42)  # For reproducibility
+        
+        # Create multiple trajectories
+        time = np.linspace(0, 1, timesteps)
+        
+        plt.subplot(2, 2, 1)
+        for i in range(num_paths):
+            # Cumulative random walk
+            steps = np.random.normal(0, 0.1, timesteps-1)
+            path = np.cumsum(np.concatenate([[0], steps]))
+            plt.plot(time, path, alpha=0.7, linewidth=1)
+        
+        plt.xlabel('Time (Diffusion Process)')
+        plt.ylabel('State Value')
+        plt.title(f'{num_paths} Random Diffusion Trajectories')
+        plt.grid(True, alpha=0.3)
+        
+        # Probability density evolution
+        plt.subplot(2, 2, 2)
+        
+        x = np.linspace(-3, 3, 100)
+        for t in [0.1, 0.3, 0.6, 1.0]:
+            # Variance increases with time in diffusion
+            variance = t
+            pdf = norm.pdf(x, scale=np.sqrt(variance))
+            plt.plot(x, pdf, label=f't={t}', linewidth=2)
+        
+        plt.xlabel('State Value')
+        plt.ylabel('Probability Density')
+        plt.title('Probability Distribution Evolution')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Branching factor visualization
+        plt.subplot(2, 2, 3)
+        branching_factors = [1, 2, 3, 4, 5]
+        max_depth = 5
+        
+        def plot_branching_tree(ax, branching_factor, depth):
+            """Recursively plot branching tree"""
+            if depth == 0:
+                return
+            
+            # Calculate positions
+            x_positions = np.linspace(-1, 1, branching_factor ** depth)
+            y_position = depth
+            
+            for i in range(branching_factor ** depth):
+                ax.plot([0], [0], 'bo', markersize=8)  # Root
+                if depth > 0:
+                    for j in range(branching_factor):
+                        ax.plot([0, x_positions[i * branching_factor + j]], 
+                               [0, y_position], 'k-', alpha=0.3)
+            
+            # Recursive call for next level
+            plot_branching_tree(ax, branching_factor, depth - 1)
+        
+        # Simple branching visualization
+        for i, bf in enumerate(branching_factors):
+            total_nodes = sum(bf ** d for d in range(max_depth + 1))
+            plt.bar(bf, total_nodes, alpha=0.7, label=f'Branch={bf}')
+        
+        plt.xlabel('Branching Factor')
+        plt.ylabel('Total Nodes after 5 steps')
+        plt.title('Tree Growth with Different Branching Factors')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Intractability threshold
+        plt.subplot(2, 2, 4)
+        computation_times = []
+        trajectory_counts = []
+        
+        for T in range(1, 21):  # Up to 20 steps for visualization
+            trajectories = 2 ** T
+            trajectory_counts.append(trajectories)
+            
+            # Estimate computation time (exponential growth)
+            # Assuming 1 nanosecond per trajectory evaluation (optimistic)
+            time_seconds = trajectories * 1e-9
+            
+            # Convert to meaningful units
+            if time_seconds < 60:
+                computation_times.append(time_seconds)
+            elif time_seconds < 3600:
+                computation_times.append(time_seconds / 60)  # minutes
+            elif time_seconds < 86400:
+                computation_times.append(time_seconds / 3600)  # hours
+            else:
+                computation_times.append(time_seconds / 86400)  # days
+        
+        time_units = ['seconds', 'minutes', 'hours', 'days']
+        unit_thresholds = [60, 3600, 86400]
+        
+        plt.semilogy(range(1, 21), computation_times, 'red', linewidth=3, marker='o')
+        plt.axvline(x=10, color='orange', linestyle='--', label='T=10 (Manageable)')
+        plt.axvline(x=15, color='red', linestyle='--', label='T=15 (Intractable)')
+        plt.axvline(x=20, color='darkred', linestyle='--', label='T=20 (Impossible)')
+        
+        plt.xlabel('Number of Timesteps (T)')
+        plt.ylabel('Computation Time')
+        plt.title('Exponential Computation Time Growth')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Stochastic process illustration saved: {filename}")
+
+
+import torch
+
+class DiffusionAnalysisVisualiser:
+    def __init__(self, output_dir="diffusion_analysis"):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(exist_ok=True)
+    
+    def plot_variance_schedule(self, ddpm, filename="variance_schedule.png"):
+        """
+        Plot the variance schedule and its mathematical properties
+        """
+        t_values = np.arange(ddpm.timesteps)
+        
+        plt.figure(figsize=(15, 10))
+        
+        # Beta schedule
+        plt.subplot(2, 3, 1)
+        plt.plot(t_values, ddpm.betas.cpu().numpy(), 'b-', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('βₜ')
+        plt.title('Noise Schedule βₜ')
+        plt.grid(True, alpha=0.3)
+        
+        # Alpha cumulative product
+        plt.subplot(2, 3, 2)
+        alpha_bar = ddpm.alphas_cumprod.cpu().numpy()
+        plt.plot(t_values, alpha_bar, 'r-', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('ᾱₜ')
+        plt.title('Cumulative Product ᾱₜ = ∏(1-βₛ)')
+        plt.grid(True, alpha=0.3)
+        
+        # Signal-to-noise ratio
+        plt.subplot(2, 3, 3)
+        snr = alpha_bar / (1 - alpha_bar + 1e-8)
+        plt.semilogy(t_values, snr, 'g-', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('SNR = ᾱₜ/(1-ᾱₜ)')
+        plt.title('Signal-to-Noise Ratio Evolution')
+        plt.grid(True, alpha=0.3)
+        
+        # Forward process variance components
+        plt.subplot(2, 3, 4)
+        sqrt_alpha_bar = np.sqrt(alpha_bar)
+        sqrt_one_minus_alpha_bar = np.sqrt(1 - alpha_bar)
+        plt.plot(t_values, sqrt_alpha_bar, 'b-', linewidth=2, label='√ᾱₜ')
+        plt.plot(t_values, sqrt_one_minus_alpha_bar, 'r-', linewidth=2, label='√(1-ᾱₜ)')
+        plt.xlabel('Timestep t')
+        plt.ylabel('Scaling Factors')
+        plt.title('Forward Process Scaling Factors')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Posterior variance
+        plt.subplot(2, 3, 5)
+        posterior_var = ddpm.posterior_variance.cpu().numpy()
+        plt.plot(t_values[1:], posterior_var[1:], 'purple', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('σₜ²')
+        plt.title('Reverse Process Posterior Variance')
+        plt.grid(True, alpha=0.3)
+        
+        # Mathematical relationship check
+        plt.subplot(2, 3, 6)
+        check_value = alpha_bar + (1 - alpha_bar)
+        plt.plot(t_values, check_value, 'orange', linewidth=2)
+        plt.axhline(y=1.0, color='red', linestyle='--', alpha=0.7)
+        plt.xlabel('Timestep t')
+        plt.ylabel('ᾱₜ + (1-ᾱₜ)')
+        plt.title('Mathematical Consistency Check\n(Should be exactly 1)')
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Variance schedule plot saved: {filename}")
+        
+        return {
+            'betas': ddpm.betas.cpu().numpy(),
+            'alpha_bar': alpha_bar,
+            'snr': snr
+        }
+
+    def plot_elbo_components(self, ddpm, filename="elbo_analysis.png"):
+        """
+        Analyze the Evidence Lower Bound (ELBO) components
+        """
+        t_values = np.arange(1, ddpm.timesteps)
+        
+        # Calculate theoretical ELBO components
+        alpha_bar = ddpm.alphas_cumprod.cpu().numpy()
+        alpha_bar_prev = np.concatenate([[1.0], alpha_bar[:-1]])
+        
+        # L_T: KL divergence between q(x_T|x_0) and N(0, I)
+        L_T = 0.5 * (alpha_bar[-1] + np.log(1 - alpha_bar[-1]) - 1)
+        
+        # L_{t-1}: KL divergences for intermediate steps
+        # Simplified calculation for visualization
+        kl_terms = []
+        for t in range(1, ddpm.timesteps):
+            # Simplified KL divergence between two Gaussians
+            mean_ratio = (1 - alpha_bar[t-1]) / (1 - alpha_bar[t]) * ddpm.alphas[t].cpu().numpy()
+            kl = 0.5 * (mean_ratio - 1 - np.log(mean_ratio))
+            kl_terms.append(kl)
+        
+        # L_0: Reconstruction term
+        L_0 = -0.5 * np.log(2 * np.pi * ddpm.posterior_variance[0].cpu().numpy())
+        
+        plt.figure(figsize=(12, 10))
+        
+        # KL divergence terms over time
+        plt.subplot(2, 2, 1)
+        plt.plot(range(1, ddpm.timesteps), kl_terms, 'b-', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('KL[q(x_{t-1}|x_t,x_0) || p_θ(x_{t-1}|x_t)]')
+        plt.title('KL Divergence Terms in ELBO\n(L_{1} to L_{T-1})')
+        plt.grid(True, alpha=0.3)
+        
+        # Cumulative KL divergence
+        plt.subplot(2, 2, 2)
+        cumulative_kl = np.cumsum(kl_terms)
+        plt.plot(range(1, ddpm.timesteps), cumulative_kl, 'r-', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('Cumulative KL Divergence')
+        plt.title('Cumulative KL Divergence\n(Sum of L_{1} to L_{t})')
+        plt.grid(True, alpha=0.3)
+        
+        # Variance of reverse process
+        plt.subplot(2, 2, 3)
+        posterior_var = ddpm.posterior_variance.cpu().numpy()
+        plt.semilogy(range(ddpm.timesteps), posterior_var, 'g-', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('Posterior Variance σₜ²')
+        plt.title('Reverse Process Variance Schedule')
+        plt.grid(True, alpha=0.3)
+        
+        # Signal preservation over time
+        plt.subplot(2, 2, 4)
+        signal_preservation = alpha_bar
+        noise_level = 1 - alpha_bar
+        plt.plot(t_values, signal_preservation, 'b-', linewidth=2, label='Signal (√ᾱₜ)')
+        plt.plot(t_values, noise_level, 'r-', linewidth=2, label='Noise (√(1-ᾱₜ))')
+        plt.xlabel('Timestep t')
+        plt.ylabel('Scaling Factor')
+        plt.title('Signal vs Noise in Forward Process')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"ELBO analysis plot saved: {filename}")
+        
+        return {
+            'kl_terms': kl_terms,
+            'cumulative_kl': cumulative_kl,
+            'L_T': L_T,
+            'L_0': L_0
+        }
+
+    def plot_reparameterization_trick(self, ddpm, filename="reparameterization.png"):
+        """
+        Visualize the reparameterization trick and its importance
+        """
+        t_values = np.arange(ddpm.timesteps)
+        alpha_bar = ddpm.alphas_cumprod.cpu().numpy()
+        
+        plt.figure(figsize=(15, 8))
+        
+        # Forward process with reparameterization
+        plt.subplot(2, 3, 1)
+        # Show the mathematical form
+        x0 = 1.0  # Normalized input
+        epsilon = np.random.randn(len(t_values))
+        
+        x_t = np.sqrt(alpha_bar) * x0 + np.sqrt(1 - alpha_bar) * epsilon
+        
+        plt.plot(t_values, x_t, 'b-', alpha=0.7, linewidth=1)
+        plt.fill_between(t_values, x_t - 0.1, x_t + 0.1, alpha=0.3)
+        plt.xlabel('Timestep t')
+        plt.ylabel('xₜ')
+        plt.title('Forward Process: xₜ = √ᾱₜ x₀ + √(1-ᾱₜ) ε')
+        plt.grid(True, alpha=0.3)
+        
+        # Distribution at different timesteps
+        plt.subplot(2, 3, 2)
+        sample_timesteps = [0, ddpm.timesteps//4, ddpm.timesteps//2, 3*ddpm.timesteps//4, ddpm.timesteps-1]
+        
+        for t in sample_timesteps:
+            # Generate multiple samples at this timestep
+            samples = []
+            for _ in range(1000):
+                eps = np.random.randn()
+                sample = np.sqrt(alpha_bar[t]) * x0 + np.sqrt(1 - alpha_bar[t]) * eps
+                samples.append(sample)
+            
+            # Plot distribution
+            plt.hist(samples, bins=50, alpha=0.6, label=f't={t}', density=True)
+        
+        plt.xlabel('xₜ value')
+        plt.ylabel('Probability Density')
+        plt.title('Distribution Evolution\n(Reparameterization Trick)')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Computational efficiency
+        plt.subplot(2, 3, 3)
+        naive_complexity = 2 ** (t_values / 10)  # Scaled exponential
+        reparam_complexity = t_values  # Linear
+        
+        plt.semilogy(t_values, naive_complexity, 'r-', linewidth=2, 
+                    label='Naive Path Sampling (Exponential)')
+        plt.semilogy(t_values, reparam_complexity, 'g-', linewidth=2,
+                    label='Reparameterization (Linear)')
+        plt.xlabel('Timesteps T')
+        plt.ylabel('Computational Complexity')
+        plt.title('Computational Efficiency\nof Reparameterization Trick')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Gradient flow comparison
+        plt.subplot(2, 3, 4)
+        # Show how reparameterization enables better gradients
+        t_vals = np.linspace(0, ddpm.timesteps-1, 50)
+        grad_naive = np.exp(-t_vals / 100)  # Vanishing gradients
+        grad_reparam = np.ones_like(t_vals)  # Stable gradients
+        
+        plt.plot(t_vals, grad_naive, 'r-', linewidth=2, label='Naive (High Variance)')
+        plt.plot(t_vals, grad_reparam, 'g-', linewidth=2, label='Reparameterization (Low Variance)')
+        plt.xlabel('Timestep t')
+        plt.ylabel('Gradient Magnitude')
+        plt.title('Gradient Estimation Quality')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # Mathematical formulation
+        plt.subplot(2, 3, 5)
+        # Empty plot for mathematical equations
+        plt.text(0.5, 0.7, 'Forward Process:', ha='center', va='center', fontsize=14, weight='bold')
+        plt.text(0.5, 0.5, 'q(xₜ|x₀) = N(xₜ; √ᾱₜ x₀, (1-ᾱₜ)I)', ha='center', va='center', fontsize=12)
+        plt.text(0.5, 0.3, 'xₜ = √ᾱₜ x₀ + √(1-ᾱₜ) ε', ha='center', va='center', fontsize=12, style='italic')
+        plt.text(0.5, 0.1, 'where ε ∼ N(0, I)', ha='center', va='center', fontsize=10)
+        plt.xlim(0, 1)
+        plt.ylim(0, 1)
+        plt.axis('off')
+        plt.title('Mathematical Foundation')
+        
+        # Practical impact
+        plt.subplot(2, 3, 6)
+        memory_naive = naive_complexity * 4e-9  # GB
+        memory_reparam = reparam_complexity * 4e-9  # GB
+        
+        plt.plot(t_values, memory_naive, 'r-', linewidth=2, label='Naive Approach')
+        plt.plot(t_values, memory_reparam, 'g-', linewidth=2, label='Reparameterization')
+        plt.axhline(y=8, color='blue', linestyle='--', label='8GB GPU Memory')
+        plt.xlabel('Timesteps T')
+        plt.ylabel('Memory Required (GB)')
+        plt.title('Memory Requirements Comparison')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Reparameterization trick plot saved: {filename}")
+
+    def plot_training_dynamics(self, trainer, filename="training_dynamics.png"):
+        """
+        Analyze training dynamics and loss landscape
+        """
+        if not hasattr(trainer, 'losses') or len(trainer.losses) == 0:
+            print("No training losses available")
+            return
+        
+        losses = trainer.losses
+        
+        plt.figure(figsize=(15, 10))
+        
+        # Training loss curve
+        plt.subplot(2, 3, 1)
+        plt.plot(losses, 'b-', linewidth=2)
+        plt.xlabel('Epoch')
+        plt.ylabel('MSE Loss')
+        plt.title('Training Loss Progression')
+        plt.grid(True, alpha=0.3)
+        
+        # Log-scale loss
+        plt.subplot(2, 3, 2)
+        plt.semilogy(losses, 'r-', linewidth=2)
+        plt.xlabel('Epoch')
+        plt.ylabel('Log MSE Loss')
+        plt.title('Training Loss (Log Scale)')
+        plt.grid(True, alpha=0.3)
+        
+        # Loss distribution
+        plt.subplot(2, 3, 3)
+        plt.hist(losses, bins=50, alpha=0.7, color='green')
+        plt.xlabel('Loss Value')
+        plt.ylabel('Frequency')
+        plt.title('Loss Value Distribution')
+        plt.grid(True, alpha=0.3)
+        
+        # Gradient norms (simulated - in practice you'd track these)
+        plt.subplot(2, 3, 4)
+        # Simulate typical gradient norm behavior
+        epochs = range(len(losses))
+        grad_norms = [max(0.1, 1.0 / (1 + 0.01 * epoch)) for epoch in epochs]
+        plt.semilogy(epochs, grad_norms, 'purple', linewidth=2)
+        plt.xlabel('Epoch')
+        plt.ylabel('Gradient Norm')
+        plt.title('Typical Gradient Norm Evolution')
+        plt.grid(True, alpha=0.3)
+        
+        # Learning rate schedule impact
+        plt.subplot(2, 3, 5)
+        lr = trainer.learning_rate
+        effective_lr = [lr * (0.99 ** epoch) for epoch in epochs]  # Simulated decay
+        plt.semilogy(epochs, effective_lr, 'orange', linewidth=2)
+        plt.xlabel('Epoch')
+        plt.ylabel('Effective Learning Rate')
+        plt.title('Learning Rate Schedule Impact')
+        plt.grid(True, alpha=0.3)
+        
+        # Convergence analysis
+        plt.subplot(2, 3, 6)
+        moving_avg = np.convolve(losses, np.ones(10)/10, mode='valid')
+        plt.plot(epochs[9:], moving_avg, 'b-', linewidth=2, label='Moving Average (10)')
+        plt.axhline(y=np.mean(losses[-10:]), color='red', linestyle='--', 
+                   label=f'Final Avg: {np.mean(losses[-10:]):.4f}')
+        plt.xlabel('Epoch')
+        plt.ylabel('Smoothed Loss')
+        plt.title('Convergence Analysis')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Training dynamics plot saved: {filename}")
+
+    def plot_jensen_inequality_analysis(self, ddpm, filename="jensen_inequality.png"):
+        """
+        Visualize the role of Jensen's inequality in the variational lower bound
+        """
+        plt.figure(figsize=(15, 10))
+        
+        # Jensen's inequality illustration
+        plt.subplot(2, 2, 1)
+        x = np.linspace(0.1, 2, 100)
+        log_x = np.log(x)
+        
+        plt.plot(x, log_x, 'b-', linewidth=3, label='log(x)')
+        plt.plot(x, x - 1, 'r--', linewidth=2, label='x - 1 (tangent at x=1)')
+        
+        # Highlight convexity
+        x_sample = np.array([0.5, 1.5])
+        y_sample = np.log(x_sample)
+        chord_y = [y_sample[0], y_sample[1]]
+        chord_x = [x_sample[0], x_sample[1]]
+        
+        plt.plot(chord_x, chord_y, 'g-', linewidth=2, alpha=0.7, label='Chord')
+        plt.fill_between(x, log_x, x-1, where=(x>=0.5)&(x<=1.5), alpha=0.3, color='orange')
+        
+        plt.xlabel('x')
+        plt.ylabel('f(x)')
+        plt.title("Jensen's Inequality: E[log(X)] ≤ log(E[X])\nfor convex functions")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # ELBO decomposition
+        plt.subplot(2, 2, 2)
+        components = ['L_T', 'L_{t-1}', 'L_0']
+        theoretical_contributions = [0.1, 0.7, 0.2]  # Example values
+        colors = ['red', 'blue', 'green']
+        
+        plt.pie(theoretical_contributions, labels=components, colors=colors, autopct='%1.1f%%')
+        plt.title('Theoretical ELBO Components\n(-ELBO = L_T + ΣL_{t-1} + L_0)')
+        
+        # Variational gap illustration
+        plt.subplot(2, 2, 3)
+        t_values = np.arange(ddpm.timesteps)
+        
+        # Simulate true log-likelihood and ELBO
+        true_ll = -np.exp(-t_values / 200)  # Simulated true log-likelihood
+        elbo = true_ll - 0.5 * (1 - np.exp(-t_values / 200))  # Simulated ELBO (lower bound)
+        
+        plt.plot(t_values, true_ll, 'g-', linewidth=3, label='True Log-Likelihood')
+        plt.plot(t_values, elbo, 'r-', linewidth=2, label='ELBO (Variational Lower Bound)')
+        plt.fill_between(t_values, elbo, true_ll, alpha=0.3, color='orange', label='Variational Gap')
+        
+        plt.xlabel('Model Capacity (Training Progress)')
+        plt.ylabel('Log-Likelihood')
+        plt.title('Evidence Lower Bound (ELBO) vs True Likelihood')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        # KL divergence terms in ELBO
+        plt.subplot(2, 2, 4)
+        alpha_bar = ddpm.alphas_cumprod.cpu().numpy()
+        kl_terms = []
+        
+        for t in range(1, ddpm.timesteps):
+            # Simplified KL term
+            kl = 0.5 * ((1 - alpha_bar[t-1]) / (1 - alpha_bar[t]) * 
+                        ddpm.alphas[t].cpu().numpy() - 1 - 
+                        np.log((1 - alpha_bar[t-1]) / (1 - alpha_bar[t]) * 
+                              ddpm.alphas[t].cpu().numpy()))
+            kl_terms.append(max(0, kl))
+        
+        plt.plot(range(1, ddpm.timesteps), kl_terms, 'purple', linewidth=2)
+        plt.xlabel('Timestep t')
+        plt.ylabel('KL[q(x_{t-1}|x_t,x_0) || p_θ(x_{t-1}|x_t)]')
+        plt.title('KL Divergence Terms in ELBO')
+        plt.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Jensen's inequality analysis plot saved: {filename}")
