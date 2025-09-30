@@ -1,11 +1,11 @@
 simulator:
-  image_size: 32
+  image_size: 64 #32
   refractive_index: 1.0005 # Silicate Areogel
   radiator_length: 1.0 #2 # 0.05 # 5cm
-  single_photon_resolution: 1.0 # 0.5 # 1.0 # 1mrad
+  single_photon_resolution: 0.7 #1.0 # 0.5 # 1.0 # 1mrad
   detection_efficiency: 0.2 # 20%
   momentum_range: [0, 100.0] # GeV/c
-  pixel_pitch: 0.0025 #0.0005 #0.005 #5mm
+  pixel_pitch: 0.00125 #0.0025
   detector_distance: 1 #Distance from radiator to detector in meters
 # Dataset Parameters
 dataset:

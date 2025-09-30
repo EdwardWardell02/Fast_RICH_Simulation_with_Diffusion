@@ -108,18 +108,18 @@ def plot_cherenkov_angle_vs_momentum(simulator, num_events=1000, momentum_range=
                        Line2D([0], [0], marker='o', color='w', markerfacecolor=colours['muon'], markersize=8, label='μ')]
     
     # Format the plot
-    plt.xlabel('True Momentum (GeV/c)')
-    plt.ylabel('Measured Cherenkov Angle (radians)')
-    plt.title(f'Cherenkov Angle vs Momentum for n = {simulator.n}')
-    plt.legend(handles=legend_elements, loc='lower right')
+    plt.xlabel('True Momentum (GeV/c)', fontsize=16)
+    plt.ylabel('Measured Cherenkov Angle (radians)', fontsize=16)
+    plt.title(f'Cherenkov Angle vs Momentum for n = {simulator.n}', fontsize=20)
+    plt.legend(handles=legend_elements, loc='lower right', fontsize=16)
     plt.grid(True, which="both", ls="--", alpha=0.5)
     ax = plt.gca()
     ax.set_xticks([0,25,50,75,100])
     ax.set_yticks([0, 0.01, 0.02, 0.03])
     ax.xaxis.set_minor_locator(MultipleLocator(5))
     ax.yaxis.set_minor_locator(MultipleLocator(0.002))
-    ax.tick_params(axis='both', which='minor', length=3, width=0.8, direction='in')
-    ax.tick_params(axis='both', which='major', length=6, width=1.2, direction='in')
+    ax.tick_params(axis='both', which='minor', length=3, width=0.8, direction='in', labelsize=17)
+    ax.tick_params(axis='both', which='major', length=6, width=1.2, direction='in', labelsize=12)
     ax.grid(which='major', linestyle='-', linewidth=0.8, alpha=0.7)
     ax.grid(which='minor', visible=False)
     # Set appropriate axis limits

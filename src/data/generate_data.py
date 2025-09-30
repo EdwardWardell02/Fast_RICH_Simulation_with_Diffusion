@@ -138,12 +138,7 @@ def generate_dataset(config, output_path, num_samples_per_type=10000, particle_t
     print(f"Metadata saved to: {output_path / 'rich_metadata.csv'}")
 
 from tqdm import tqdm
-def generate_combined_events_dataset(config, output_path, number_of_images=1000, num_samples_per_image=10000):
-    """
-    Generate a dataset of RICH detector combined images.
-    
-    Each output image is formed by combining many events.
-    """
+"""def generate_combined_events_dataset(config, output_path, number_of_images=1000, num_samples_per_image=10000, particle_type='pi', momentum_distribution='uniform'):
     simulator = RICHSimulator(config)
 
     all_images = []
@@ -152,7 +147,8 @@ def generate_combined_events_dataset(config, output_path, number_of_images=1000,
     for i in tqdm(range(number_of_images)):
         data = simulator.generate_events(
             num_samples_per_image,
-            momentum_distribution='uniform'
+            momentum_distribution = momentum_distribution,
+            particle_type = particle_type
         )
 
         # Sum over all generated events to form one combined image
@@ -179,4 +175,35 @@ def generate_combined_events_dataset(config, output_path, number_of_images=1000,
         yaml.dump(config, f)
 
     print(f"Dataset generated with {len(all_images)} combined images")
-    print(f"Images saved to: {output_path / 'rich_images_combined_events.npz'}")
+    print(f"Images saved to: {output_path / 'rich_images_combined_events.npz'}")"""
+
+def generate_combined_events_dataset(config, output_path, number_of_images=1000, num_samples_per_image=1000, particle_type='pi', fixed_momentum=10.0):
+    """
+    Generate dataset with fixed momentum for consistent mass reconstruction
+    """
+    simulator = RICHSimulator(config)
+    
+    all_images = []
+    all_photon_hits = []
+    
+    for i in tqdm(range(number_of_images)):
+        # Generate events with FIXED momentum
+        images = []
+        for _ in range(num_samples_per_image):
+            image, hits = simulator.generate_event(particle_type, fixed_momentum)
+            images.append(image)
+        
+        # Sum to create combined image (like your training data)
+        combined_image = np.sum(images, axis=0)
+        all_images.append(combined_image)
+        all_photon_hits.append(np.sum([len(np.where(img > 0)[0]) for img in images]))
+    
+    # Save dataset
+    output_path.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        output_path / f'rich_images_fixed_momentum_{particle_type}_{fixed_momentum}GeV.npz',
+        images=np.array(all_images),
+        photon_hits=np.array(all_photon_hits)
+    )
+    
+    print(f"Generated {len(all_images)} images with fixed momentum {fixed_momentum} GeV/c for {particle_type}")

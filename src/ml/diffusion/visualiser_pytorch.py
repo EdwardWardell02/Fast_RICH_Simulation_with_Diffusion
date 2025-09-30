@@ -68,19 +68,19 @@ class RICHVisualiser:
             
             # Plot noisy image
             im1 = axes[0, i].imshow(display_noisy, cmap=self.cmap)
-            axes[0, i].set_title(f'Step {t}\n(β={ddpm.betas[t].item():.4f})', fontsize=10)
+            axes[0, i].set_title(f'Step {t}\n(β={ddpm.betas[t].item():.4f})', fontsize=20)
             axes[0, i].axis('off')
             plt.colorbar(im1, ax=axes[0, i], fraction=0.046)
             
             # Plot added noise
             im2 = axes[1, i].imshow(display_noise, cmap='RdBu_r', vmin=0, vmax=1)
-            axes[1, i].set_title(f'Added Noise (t={t})', fontsize=10)
+            axes[1, i].set_title(f'Added Noise (t={t})', fontsize=20)
             axes[1, i].axis('off')
             plt.colorbar(im2, ax=axes[1, i], fraction=0.046)
         
-        plt.suptitle('Forward Diffusion Process: RICH Ring → Noise', fontsize=16, y=1.02)
+        plt.suptitle('Forward Diffusion Process: RICH Ring → Noise', fontsize=26, y=1.02)
         plt.tight_layout()
-        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight', 
+        plt.savefig(self.output_dir / filename, dpi=300, bbox_inches='tight', 
                 facecolor='white', edgecolor='none')
         plt.close()
         
@@ -327,123 +327,91 @@ class StochasticProcessVisualiser:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-    def plot_stochastic_process_illustration(self, num_paths=10, timesteps=100, filename="stochastic_process.png"):
+    def plot_stochastic_process_illustration(self, num_paths=100, timesteps=500):
         """
-        Visualize multiple stochastic trajectories in diffusion process
+        Generate and save individual plots illustrating aspects of a stochastic diffusion process.
         """
-        plt.figure(figsize=(15, 10))
-        
-        # Simulate multiple stochastic paths (Brownian motion-like)
         np.random.seed(42)  # For reproducibility
-        
-        # Create multiple trajectories
         time = np.linspace(0, 1, timesteps)
-        
-        plt.subplot(2, 2, 1)
+
+        # 1. Multiple stochastic paths
+        plt.figure(figsize=(8, 6))
         for i in range(num_paths):
-            # Cumulative random walk
             steps = np.random.normal(0, 0.1, timesteps-1)
             path = np.cumsum(np.concatenate([[0], steps]))
             plt.plot(time, path, alpha=0.7, linewidth=1)
-        
-        plt.xlabel('Time (Diffusion Process)')
-        plt.ylabel('State Value')
-        plt.title(f'{num_paths} Random Diffusion Trajectories')
+
+        plt.xlabel('Time (Diffusion Process)', fontsize=16)
+        plt.ylabel('State Value', fontsize=16)
+        plt.title(f'{num_paths} Random Diffusion Trajectories', fontsize=20)
         plt.grid(True, alpha=0.3)
-        
-        # Probability density evolution
-        plt.subplot(2, 2, 2)
-        
-        x = np.linspace(-3, 3, 100)
+        plt.savefig(self.output_dir / "random_diffusion_trajectories.png", dpi=150, bbox_inches='tight')
+        plt.close()
+
+        # 2. Probability density evolution
+        plt.figure(figsize=(8, 6))
+        x = np.linspace(-3, 3, 200)
         for t in [0.1, 0.3, 0.6, 1.0]:
-            # Variance increases with time in diffusion
             variance = t
             pdf = norm.pdf(x, scale=np.sqrt(variance))
             plt.plot(x, pdf, label=f't={t}', linewidth=2)
-        
-        plt.xlabel('State Value')
-        plt.ylabel('Probability Density')
-        plt.title('Probability Distribution Evolution')
+
+        plt.xlabel('State Value', fontsize=16)
+        plt.ylabel('Probability Density', fontsize=16)
+        plt.title('Probability Distribution Evolution', fontsize=20)
         plt.legend()
         plt.grid(True, alpha=0.3)
-        
-        # Branching factor visualization
-        plt.subplot(2, 2, 3)
+        plt.savefig(self.output_dir / "probability_distribution_evolution.png", dpi=150, bbox_inches='tight')
+        plt.close()
+
+        # 3. Branching factor visualization
+        plt.figure(figsize=(8, 6))
         branching_factors = [1, 2, 3, 4, 5]
         max_depth = 5
-        
-        def plot_branching_tree(ax, branching_factor, depth):
-            """Recursively plot branching tree"""
-            if depth == 0:
-                return
-            
-            # Calculate positions
-            x_positions = np.linspace(-1, 1, branching_factor ** depth)
-            y_position = depth
-            
-            for i in range(branching_factor ** depth):
-                ax.plot([0], [0], 'bo', markersize=8)  # Root
-                if depth > 0:
-                    for j in range(branching_factor):
-                        ax.plot([0, x_positions[i * branching_factor + j]], 
-                               [0, y_position], 'k-', alpha=0.3)
-            
-            # Recursive call for next level
-            plot_branching_tree(ax, branching_factor, depth - 1)
-        
-        # Simple branching visualization
-        for i, bf in enumerate(branching_factors):
+        for bf in branching_factors:
             total_nodes = sum(bf ** d for d in range(max_depth + 1))
             plt.bar(bf, total_nodes, alpha=0.7, label=f'Branch={bf}')
-        
-        plt.xlabel('Branching Factor')
-        plt.ylabel('Total Nodes after 5 steps')
-        plt.title('Tree Growth with Different Branching Factors')
+
+        plt.xlabel('Branching Factor', fontsize=16)
+        plt.ylabel('Total Nodes after 5 steps', fontsize=16)
+        plt.title('Tree Growth with Different Branching Factors', fontsize=20)
         plt.legend()
         plt.grid(True, alpha=0.3)
-        
-        # Intractability threshold
-        plt.subplot(2, 2, 4)
+        plt.savefig(self.output_dir / "branching_growth.png", dpi=150, bbox_inches='tight')
+        plt.close()
+
+        # 4. Exponential computation time growth
+        plt.figure(figsize=(8, 6))
         computation_times = []
         trajectory_counts = []
-        
-        for T in range(1, 21):  # Up to 20 steps for visualization
+        for T in range(1, 21):
             trajectories = 2 ** T
             trajectory_counts.append(trajectories)
-            
-            # Estimate computation time (exponential growth)
-            # Assuming 1 nanosecond per trajectory evaluation (optimistic)
             time_seconds = trajectories * 1e-9
-            
-            # Convert to meaningful units
             if time_seconds < 60:
                 computation_times.append(time_seconds)
             elif time_seconds < 3600:
-                computation_times.append(time_seconds / 60)  # minutes
+                computation_times.append(time_seconds / 60)
             elif time_seconds < 86400:
-                computation_times.append(time_seconds / 3600)  # hours
+                computation_times.append(time_seconds / 3600)
             else:
-                computation_times.append(time_seconds / 86400)  # days
-        
-        time_units = ['seconds', 'minutes', 'hours', 'days']
-        unit_thresholds = [60, 3600, 86400]
-        
+                computation_times.append(time_seconds / 86400)
+
         plt.semilogy(range(1, 21), computation_times, 'red', linewidth=3, marker='o')
         plt.axvline(x=10, color='orange', linestyle='--', label='T=10 (Manageable)')
         plt.axvline(x=15, color='red', linestyle='--', label='T=15 (Intractable)')
         plt.axvline(x=20, color='darkred', linestyle='--', label='T=20 (Impossible)')
-        
+
         plt.xlabel('Number of Timesteps (T)')
         plt.ylabel('Computation Time')
         plt.title('Exponential Computation Time Growth')
         plt.legend()
         plt.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        plt.savefig(self.output_dir / filename, dpi=150, bbox_inches='tight')
+        plt.savefig(self.output_dir / "exponential_computation_growth.png", dpi=150, bbox_inches='tight')
         plt.close()
-        
-        print(f"Stochastic process illustration saved: {filename}")
+
+        print("All stochastic process illustrations saved individually.")
+
 
 
 import torch

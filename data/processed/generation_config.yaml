@@ -24,14 +24,14 @@ paths:
 simulator:
   detection_efficiency: 0.2
   detector_distance: 1
-  image_size: 32
+  image_size: 64
   momentum_range:
   - 0
   - 100.0
-  pixel_pitch: 0.0025
+  pixel_pitch: 0.00125
   radiator_length: 1.0
   refractive_index: 1.0005
-  single_photon_resolution: 1.0
+  single_photon_resolution: 0.7
 training:
   batch_size: 128
   checkpoint_dir: models/checkpoints/

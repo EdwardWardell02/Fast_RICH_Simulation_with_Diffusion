@@ -222,21 +222,17 @@ class RICHSimulator:
         Args:
             num_events (int): Number of events to generate
             momentum_range (list): [min, max] momentum range in GeV/c
-            particle_type (str or None): Specific particle type to generate, or None for random selection
-            momentum_distribution (str): Distribution to use for momentum sampling ('uniform', '1/p2', or 'exponential')
-                
-        Returns:
-            dict: Dictionary with images, particle types, and momenta
+            particle_type (str or list): Specific particle type(s) to generate
+            momentum_distribution (str): Distribution to use for momentum sampling
         """
+        # Handle particle_type input - FIXED VERSION
         if particle_type is None:
             particle_types = list(constants.PARTICLE_MASSES.keys())
         elif isinstance(particle_type, str):
-            if particle_type not in constants.PARTICLE_MASSES:
-                raise ValueError(f"Invalid particle type: {particle_type}")
             particle_types = [particle_type]
         elif isinstance(particle_type, (list, tuple, set, np.ndarray)):
             particle_types = list(particle_type)
-            # validate all provided names
+            # Validate particle types
             invalid = [p for p in particle_types if p not in constants.PARTICLE_MASSES]
             if invalid:
                 raise ValueError(f"Invalid particle type(s): {invalid}")
@@ -249,13 +245,10 @@ class RICHSimulator:
         photon_hits = []
         
         for _ in range(num_events):
-            # Select particle type
-            if particle_type is None:
-                p_type = np.random.choice(particle_types)
-            else:
-                p_type = particle_type
+            # Select particle type - FIXED: Always choose randomly from available types
+            p_type = np.random.choice(particle_types)
                 
-            # Determine momentum range for this particle type
+            # Determine momentum range
             if momentum_range is None:
                 if p_type == 'K':
                     p_range = [2.0, 100.0]
@@ -266,7 +259,7 @@ class RICHSimulator:
             else:
                 p_range = momentum_range
                 
-            # Sample momentum based on the specified distribution
+            # Sample momentum
             if momentum_distribution == 'uniform':
                 p = np.random.uniform(p_range[0], p_range[1])
             elif momentum_distribution == '1/p2':
@@ -276,7 +269,7 @@ class RICHSimulator:
             else:
                 raise ValueError(f"Unknown momentum distribution: {momentum_distribution}")
 
-            # generate image
+            # Generate image
             image, hits = self.generate_event(p_type, p)
             images.append(image)
             types.append(p_type)
